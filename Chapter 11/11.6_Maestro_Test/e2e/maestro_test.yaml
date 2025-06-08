@@ -1,0 +1,9 @@
+scenario: Counter increments
+devices:
+  - name: ios.simulator
+    os: ios
+    osVersion: "16.0"
+flow:
+  - launchApp
+  - tapText: "+1"
+  - assertText: "1"
