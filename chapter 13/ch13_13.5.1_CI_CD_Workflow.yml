@@ -1,0 +1,40 @@
+name: Mobile CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: npm ci
+      - name: Run unit & component tests
+        run: npm test
+
+  ios_deploy:
+    needs: build_and_test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: bundle exec fastlane ios sync_signing build_app submit_to_app_store
+
+  android_deploy:
+    needs: build_and_test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: bundle exec fastlane android sync_keystore build_release upload_to_play_store
+
+  ota_updates:
+    needs: [build_and_test, ios_deploy, android_deploy]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: npm install -g eas-cli appcenter-cli
+      - run: eas update --branch production --message "Automated OTA on ${{ github.sha }}"
+      - run: appcenter codepush release-react -a user/app-android -d Production
+      - run: appcenter codepush release-react -a user/app-ios -d Production
